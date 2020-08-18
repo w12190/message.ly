@@ -2,14 +2,16 @@
 
 /** Middleware for handling req authorization for routes. */
 
+// Imports
 const jwt = require("jsonwebtoken");
-
 const { SECRET_KEY } = require("../config");
 const { UnauthorizedError } = require("../expressError");
 
 
-/** Middleware: Authenticate user. */
-function authenticateJWT(req, res, next) {
+/**
+ * Middleware: Authenticate user.
+*/
+function authenticateJWT(req, res, next){
   try {
     const tokenFromBody = req.body._token;
     const payload = jwt.verify(tokenFromBody, SECRET_KEY);
@@ -21,11 +23,11 @@ function authenticateJWT(req, res, next) {
   }
 }
 
-/** Middleware: Requires user is authenticated. */
+/**
+ * Middleware: Requires user is authenticated.
+ */
 function ensureLoggedIn(req, res, next) {
   console.log('You are in ensureLoggedIn');
-  console.log('req.body._token', req.body._token);
-  console.log('res.locals.user', res.locals.user);
   try {
     if (!res.locals.user) {
       throw new UnauthorizedError();
@@ -37,7 +39,9 @@ function ensureLoggedIn(req, res, next) {
   }
 }
 
-/** Middleware: Requires user is user for route. */
+/**
+ * Middleware: Requires user is user for route.
+ */
 function ensureCorrectUser(req, res, next) {
   try {
     if (!res.locals.user ||
@@ -51,7 +55,7 @@ function ensureCorrectUser(req, res, next) {
   }
 }
 
-
+// Exports
 module.exports = {
   authenticateJWT,
   ensureLoggedIn,

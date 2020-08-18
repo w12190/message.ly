@@ -1,24 +1,26 @@
 "use strict";
 
+// Imports
 const db = require('../db')
 const bcrypt = require('bcrypt');
 const { BCRYPT_WORK_FACTOR } = require('../config');
 const { BadRequestError, NotFoundError } = require('../expressError');
 
 
-
 /** User of the site. */
-
 class User {
-  /** Register new user. Returns
-   *    {username, password, first_name, last_name, phone}
+  /**
+   * Register new user and adds user to database.
+   * Accepts user data; returns user data if registration successful.
+   * JSON format: {username, password, first_name, last_name, phone}
    */
   static async register({ username, password, first_name, last_name, phone }) {
     //Calculates pw hash
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
+    try {
+      const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
 
-    //Insert into DB
-    const results = await db.query(`
+      //Insert into DB
+      const results = await db.query(`
       INSERT INTO users (username,
                          password,
                          first_name,
@@ -29,70 +31,89 @@ class User {
       VALUES
           ($1, $2, $3, $4, $5, $6, $7)
       RETURNING username, password, first_name, last_name, phone, last_login_at`,
-      [username, hashedPassword, first_name, last_name, phone, new Date(), new Date()])
+        [username, hashedPassword, first_name, last_name, phone, new Date(), new Date()])
 
-    const newUser = results.rows[0];
-    if (!newUser.username) {
-      throw new BadRequestError();
+      const newUser = results.rows[0];
+      if (!newUser.username) {
+        throw new BadRequestError();
+      }
+      return newUser;
     }
-    return newUser;
+    catch (error) {
+      throw error
+    }
   }
 
-  /** Authenticate: is username/password valid? Returns boolean.
+  /**
+   * Authenticate - check if user credentials are valid
    * Accepts a username and password; returns true if authenticated, false otherewise.
   */
   static async authenticate(username, password) {
-    // Query DB for "username"
-    const results = await db.query(`
+    try {
+      // Query DB for "username"
+      const results = await db.query(`
       SELECT username, password
       FROM users
       WHERE username = $1`, [username])
-  debugger
-    // Check if user exists
-    if (results.rows.length !== 0) {
-      // Check if password correct
-      if (await bcrypt.compare(password, results.rows[0].password) === true) {
-        return true
+
+      // Check if user exists
+      if (results.rows.length !== 0) {
+        if (await bcrypt.compare(password, results.rows[0].password) === true) {
+          return true
+        }
       }
+      return false
     }
-    return false
+    catch (error) {
+      throw error
+    }
   }
 
-  /** Update last_login_at for user */
+  /**
+   * Updates a user's last login time. 
+   * Accepts a username, returns the username if update successful.
+   */
   static async updateLoginTimestamp(username) {
-    // Assume logged in via authenticate()
-    const result = await db.query(` 
+    try {
+      // Assume logged in via authenticate()
+      const result = await db.query(` 
       UPDATE users
       SET last_login_at = current_timestamp
       WHERE username = $1
       RETURNING username`
-      , [username])
-    if (!result) {
-      throw new NotFoundError()
+        , [username])
+      if (!result) {
+        throw new NotFoundError()
+      }
+    }
+    catch (error) {
+      throw error
     }
   }
 
-  /** All: basic info on all users:
-   * [{username, first_name, last_name}, ...] */
-
+  /**
+   * Gets and returns basic data on all users.
+   * Return format: [{username, first_name, last_name}, ...]
+   */
   static async all() {
-    const results = await db.query(`
+    try {
+      const results = await db.query(`
       SELECT username,
             first_name,
             last_name
       FROM users`);
-    return results.rows;
+      return results.rows;
+    }
+    catch (error) {
+      throw error
+    }
   }
 
-  /** Get: get user by username
-   *
-   * returns {username,
-   *          first_name,
-   *          last_name,
-   *          phone,
-   *          join_at,
-   *          last_login_at } */
-
+  /**
+   * Gets a user's data.
+   * Accepts a username; returns a POJO holding user data.
+   * Return format: {username, first_name, last_name, phone, join_at, last_login_at }
+   */
   static async get(username) {
     const result = await db.query(`
       SELECT username,
@@ -109,14 +130,12 @@ class User {
     return user;
   }
 
-  /** Return messages from this user.
-   *
-   * [{id, to_user, body, sent_at, read_at}]
-   *
-   * where to_user is
-   *   {username, first_name, last_name, phone}
+  /**
+   * Gets all messages from a given user.
+   * Accepts a username, returns all messages from the user in an array.
+   * Array format: [{id, to_user, body, sent_at, read_at}, ...]
+   * to_user format: {username, first_name, last_name, phone}
    */
-
   static async messagesFrom(username) {
     try {
       const uMessages = await db.query(`
@@ -149,18 +168,15 @@ class User {
     }
   };
 
-  // from_username
-
-  /** Return messages to this user.
-   *
-   * [{id, from_user, body, sent_at, read_at}]
-   *
-   * where from_user is
-   *   {id, first_name, last_name, phone}
+  /**
+   * Gets all messages to a given user.
+   * Accepts a username, returns an array holding all messages to that user.
+   * Array format: [{id, from_user, body, sent_at, read_at}, ...]
+   * where rom_user is: {id, first_name, last_name, phone}
    */
-
   static async messagesTo(username) {
-    const uMessages = await db.query(`
+    try {
+      const uMessages = await db.query(`
       SELECT m.id,
             m.from_username AS from_user,
             m.body,
@@ -175,19 +191,23 @@ class User {
       ON m.from_username = u.username
       WHERE m.to_username = $1`, [username])
 
-    const messages = uMessages.rows;
+      const messages = uMessages.rows;
 
-    for (let message of messages) {
-      const { username, first_name, last_name, phone } = message;
-      message['from_user'] = { username, first_name, last_name, phone } //TODO: (leave this) changed id:username->username; instructions wanted id; either tests or instructions are wrong
-      delete message.username;
-      delete message.first_name;
-      delete message.last_name;
-      delete message.phone;
+      for (let message of messages) {
+        const { username, first_name, last_name, phone } = message;
+        message['from_user'] = { username, first_name, last_name, phone } //T(leave this) changed id:username->username; instructions wanted id; either tests or instructions are wrong
+        delete message.username;
+        delete message.first_name;
+        delete message.last_name;
+        delete message.phone;
+      }
+      return messages;
     }
-    return messages;
+    catch (error) {
+      throw error
+    }
   }
 }
 
-
+// Exports
 module.exports = User;

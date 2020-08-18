@@ -13,8 +13,14 @@ const router = new Router();
 // Middleware
 router.use(express.json());
 
+/**** Routes ****/
 
-/** POST /login: {username, password} => {token} */
+/**
+ * POST '/login' - Handles user login.
+ * Accepts user's login credentials; returns JWT token if login successful.
+ * Request: {username, password}
+ * Response: {token}
+ */
 router.post('/login', async function (req, res, next) {
   console.log('Route: /login')
 
@@ -36,8 +42,11 @@ router.post('/login', async function (req, res, next) {
   }
 })
 
-/** POST /register: registers, logs in, and returns token.
- * {username, password, first_name, last_name, phone} => {token}.
+/**
+ * POST '/register' - Handles user registration.
+ * Accepts user's credentials; returns user data if registration successful.
+ * Request: {username, password, first_name, last_name, phone}
+ * Response: {token}
  */
 router.post('/register', async function (req, res, next) {
   console.log('Route: /register')
@@ -48,7 +57,7 @@ router.post('/register', async function (req, res, next) {
   } catch (err) {
     return next(err);
   }
-});
+})
 
 // Exports
 module.exports = router;

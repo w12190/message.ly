@@ -1,15 +1,18 @@
 "use strict";
 
+// Imports
 const Router = require("express").Router;
-const router = new Router();
 const User = require('../models/user');
 
+// Router
+const router = new Router();
 
-/** GET / - get list of users.
- *
- * => {users: [{username, first_name, last_name, phone}, ...]}
- *
- **/
+/**** Routes ****/
+
+/**
+ * GET '/' - Gets and returns a list of all users in JSON.
+ * Format: {users: [{username, first_name, last_name, phone}, ...]}
+ */
 router.get('/', async function(req, res, next) {
   try {
     const users = await User.all();
@@ -19,12 +22,11 @@ router.get('/', async function(req, res, next) {
   }
 })
 
-
-/** GET /:username - get detail of users.
- *
- * => {user: {username, first_name, last_name, phone, join_at, last_login_at}}
- *
- **/
+/**
+ * GET /:username - Gets a user's data.
+ * Accepts a username; returns the user's data in JSON.
+ * Format: {user: {username, first_name, last_name, phone, join_at, last_login_at}}
+ */
 router.get('/:username', async function(req, res, next) {
   try {
     console.log('AT /:username');
@@ -37,15 +39,12 @@ router.get('/:username', async function(req, res, next) {
   }
 })
 
-/** GET /:username/to - get messages to user
- *
- * => {messages: [{id,
- *                 body,
- *                 sent_at,
- *                 read_at,
- *                 from_user: {username, first_name, last_name, phone}}, ...]}
- *
- **/
+/**
+ * GET /:username/to - Gets all messages to a given user.
+ * Accepts a username; returns JSON of all messages to the user.
+ * Format: {messages: [{id, body, sent_at, read_at,
+ *          from_user: {username, first_name, last_name, phone}}, ...]}
+ */
 router.get('/:username/to', async function (req, res, next) {
   console.log('AT: /:username/to');
   try {
@@ -57,16 +56,12 @@ router.get('/:username/to', async function (req, res, next) {
   }
 });
 
-/** GET /:username/from - get messages from user
- *
- * => {messages: [{id,
- *                 body,
- *                 sent_at,
- *                 read_at,
- *                 to_user: {username, first_name, last_name, phone}}, ...]}
- *
- **/
-
+/**
+ * GET /:username/from - Get all messages from a given user.
+ * Accepts a username; returns JSON of all messages to the user.
+ * JSON format: {messages: [{id, body, sent_at, read_at,
+ *               to_user: {username, first_name, last_name, phone}}, ...]}
+ */
  router.get('/:username/from', async function(req, res, next) {
    console.log('/:username/from');
    try {
@@ -78,4 +73,5 @@ router.get('/:username/to', async function (req, res, next) {
    }
  })
 
+// Exports
 module.exports = router;

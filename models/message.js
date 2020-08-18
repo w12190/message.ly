@@ -1,21 +1,19 @@
 "use strict";
 
-/** Message class for message.ly */
-
+// Imports
 const { NotFoundError } = require("../expressError");
 const db = require("../db");
 
 /** Message on the site. */
-
 class Message {
 
   /** Register new message -- returns
    *    {id, from_username, to_username, body, sent_at}
    */
-
   static async create({ from_username, to_username, body }) {
-    const result = await db.query(
-          `INSERT INTO messages (from_username,
+    try {
+      const result = await db.query(
+        `INSERT INTO messages (from_username,
                                  to_username,
                                  body,
                                  sent_at)
@@ -23,37 +21,44 @@ class Message {
                ($1, $2, $3, current_timestamp)
              RETURNING id, from_username, to_username, body, sent_at`,
         [from_username, to_username, body]);
-
-    return result.rows[0];
+      return result.rows[0];
+    }
+    catch (error) {
+      return error
+    }
   }
 
-  /** Update read_at for message */
-
+  /** Updates a message's last read time (read_at).
+   * Accepts a message's id, returns the id and read_at time of the id if successful.
+  */
   static async markRead(id) {
-    const result = await db.query(
-          `UPDATE messages
+    try {
+      const result = await db.query(
+        `UPDATE messages
            SET read_at = current_timestamp
              WHERE id = $1
              RETURNING id, read_at`,
         [id]);
-    const message = result.rows[0];
+      const message = result.rows[0];
 
-    if (!message) throw new NotFoundError(`No such message: ${id}`);
+      if (!message) throw new NotFoundError(`No such message: ${id}`);
 
-    return message;
+      return message;
+    }
+    catch (error) {
+      throw error
+    }
   }
 
   /** Get: get message by id
-   *
-   * returns {id, from_user, to_user, body, sent_at, read_at}
-   *
-   * both to_user and from_user = {username, first_name, last_name, phone}
-   *
+   * Accepts a message's id; returns the message.
+   * Return JSON: {id, from_user, to_user, body, sent_at, read_at}
+   * JSON details: both to_user and from_user = {username, first_name, last_name, phone}
    */
-
   static async get(id) {
-    const result = await db.query(
-          `SELECT m.id,
+    try {
+      const result = await db.query(
+        `SELECT m.id,
                   m.from_username,
                   f.first_name AS from_first_name,
                   f.last_name AS from_last_name,
@@ -71,30 +76,34 @@ class Message {
              WHERE m.id = $1`,
         [id]);
 
-    let m = result.rows[0];
+      let m = result.rows[0];
 
-    if (!m) throw new NotFoundError(`No such message: ${id}`);
+      if (!m) throw new NotFoundError(`No such message: ${id}`);
 
-    return {
-      id: m.id,
-      from_user: {
-        username: m.from_username,
-        first_name: m.from_first_name,
-        last_name: m.from_last_name,
-        phone: m.from_phone,
-      },
-      to_user: {
-        username: m.to_username,
-        first_name: m.to_first_name,
-        last_name: m.to_last_name,
-        phone: m.to_phone,
-      },
-      body: m.body,
-      sent_at: m.sent_at,
-      read_at: m.read_at,
-    };
+      return {
+        id: m.id,
+        from_user: {
+          username: m.from_username,
+          first_name: m.from_first_name,
+          last_name: m.from_last_name,
+          phone: m.from_phone,
+        },
+        to_user: {
+          username: m.to_username,
+          first_name: m.to_first_name,
+          last_name: m.to_last_name,
+          phone: m.to_phone,
+        },
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at,
+      };
+    }
+    catch (error) {
+      throw error
+    }
   }
 }
 
-
+// Exports
 module.exports = Message;
