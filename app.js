@@ -30,7 +30,8 @@ app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/messages", messageRoutes);
 
-console.log(new NotFoundError());
+// console.log(new NotFoundError());
+
 /** 404 handler: matches unmatched routes; raises NotFoundError. */
 app.use(function (req, res, next) {
   console.log('************ PATH', req.path);

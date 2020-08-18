@@ -15,17 +15,18 @@ router.use(express.json());
 
 
 /** POST /login: {username, password} => {token} */
-router.post('/login', function (req, res, next) {
+router.post('/login', async function (req, res, next) {
   console.log('Route: /login')
 
   try {
-    const { username, password } = req.body
     // Check if user credentials valid
-    if (User.authenticate(req.body)) {
-      User.updateLoginTimestamp(username)
+    // TODO: changed 'username' to 'req.body.username'; added await and async
+    if (User.authenticate(req.body.username, req.body.password)) {
+      await User.updateLoginTimestamp(req.body.username)
 
       // Create and return JWT token
-      const token = jwt.sign({ username }, config.SECRET_KEY)
+      //TODO: changed first param of jwt.sign from { username } to { username: req.body.username }
+      const token = jwt.sign({ username: req.body.username }, config.SECRET_KEY)
       return res.json({ token })
     }
     else {
@@ -44,12 +45,12 @@ router.post('/login', function (req, res, next) {
 router.post('/register', async function (req, res, next) {
   console.log('Route: /register')
   try {
-  const newUser = await User.register(req.body)
-  return res.json(newUser)
-  
-} catch (err) {
-  return next(err);
-}
+    const newUser = await User.register(req.body)
+    const username = await User.updateLoginTimestamp(req.body.username) //TODO: added this line to update timestamp on login
+    return res.json(newUser)
+  } catch (err) {
+    return next(err);
+  }
 });
 
 // Exports

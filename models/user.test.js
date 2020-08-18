@@ -26,7 +26,6 @@ describe("Test User class", function () {
       last_name: "Burton",
       phone: "+14155551212",
     });
-
     expect(u.username).toBe("joel");
     expect(u.password).not.toBe(undefined);
   });

@@ -3,7 +3,7 @@
 const db = require('../db')
 const bcrypt = require('bcrypt');
 const { BCRYPT_WORK_FACTOR } = require('../config');
-const {BadRequestError} = require('../expressError');
+const { BadRequestError, NotFoundError } = require('../expressError');
 
 
 
@@ -16,41 +16,44 @@ class User {
   static async register({ username, password, first_name, last_name, phone }) {
     //Calculates pw hash
     const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
-    // debugger
 
     //Insert into DB
+    //TODO: added last_login_at to the INSERT INTo so we stopped failing the 'can get' test b/c it register a user via User.get, not /register which calls updateLastLoginTime().
     const results = await db.query(`
       INSERT INTO users (username,
                          password,
                          first_name,
                          last_name,
                          phone,
-                         join_at)
+                         join_at,
+                         last_login_at)
       VALUES
-          ($1, $2, $3, $4, $5, $6)
-      RETURNING username, password, first_name, last_name, phone`,
-      [username, hashedPassword, first_name, last_name, phone, new Date()])
-    
+          ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING username, password, first_name, last_name, phone, last_login_at`,
+      [username, hashedPassword, first_name, last_name, phone, new Date(), new Date()])
+
     const newUser = results.rows[0];
-    debugger
-    if ( !newUser.username ) {
+    if (!newUser.username) {
       throw new BadRequestError();
     }
     return newUser;
   }
 
-  /** Authenticate: is username/password valid? Returns boolean. */
+  /** Authenticate: is username/password valid? Returns boolean.
+   * Accepts a username and password; returns true if authenticated, false otherewise.
+  */
   static async authenticate(username, password) {
     // Query DB for "username"
-    const results = db.query(`
+    //TODO: added await to following line
+    const results = await db.query(`
       SELECT username, password
       FROM users
       WHERE username = $1`, [username])
-
+  debugger
     // Check if user exists
-    if (results.rows[0]){
+    if (results.rows.length !== 0) { //TODO: cannot access .rows[0] if no rows, so changed to rows.length === 0 to check
       // Check if password correct
-      if (await bcrypt.compare(password, results.rows[0][password]) === True){
+      if (await bcrypt.compare(password, results.rows[0].password) === true) {
         return true
       }
     }
@@ -60,13 +63,16 @@ class User {
   /** Update last_login_at for user */
   static async updateLoginTimestamp(username) {
     // Assume logged in via authenticate()
-    const results = db.query(`
+    //TODO: forgot await
+    const result = await db.query(` 
       UPDATE users
-      SET last_login_at = $1
-      WHERE username = $2
-      RETURNING last_login_at
-      `, [new Date(), username])
-    console.log(results.rows[0]['last_login_at'])
+      SET last_login_at = current_timestamp
+      WHERE username = $1
+      RETURNING username` //TODO: commented out this line
+      , [username]) //TODO: changed new Date() to current_timestamp on 67
+    if (!result) {
+      throw new NotFoundError()
+    }
   }
 
   /** All: basic info on all users:
@@ -100,8 +106,8 @@ class User {
             last_login_at
       FROM users
       WHERE username = $1`,
-        [username]);
-    
+      [username]);
+
     const user = result.rows[0];
     return user;
   }
@@ -116,9 +122,9 @@ class User {
 
   static async messagesFrom(username) {
     try {
+      //TODO: removed an extra m.to_username
       const uMessages = await db.query(`
         SELECT m.id,
-              m.to_username,
               m.body,
               m.sent_at,
               m.read_at,
@@ -132,7 +138,7 @@ class User {
         WHERE m.from_username = $1
       `, [username]);
       const messages = uMessages.rows;
-  
+
       for (let message of messages) {
         const { username, first_name, last_name, phone } = message;
         message['to_user'] = { username, first_name, last_name, phone };
@@ -158,9 +164,10 @@ class User {
    */
 
   static async messagesTo(username) {
+    //TODO: added AS from_user to correct the column name
     const uMessages = await db.query(`
       SELECT m.id,
-            m.from_username,
+            m.from_username AS from_user,
             m.body,
             m.sent_at,
             m.read_at,
@@ -171,19 +178,19 @@ class User {
       FROM users AS u
       JOIN messages AS m
       ON m.from_username = u.username
-      WHERE m.to_username = $1`,[username])
+      WHERE m.to_username = $1`, [username])
 
-      const messages = uMessages.rows;
+    const messages = uMessages.rows;
 
-      for (let message of messages) {
-        const { username, first_name, last_name, phone } = message;
-        message['from_username'] = { id: username, first_name, last_name, phone }
-        delete message.username;
-        delete message.first_name;
-        delete message.last_name;
-        delete message.phone;
-      }
-      return messages;
+    for (let message of messages) {
+      const { username, first_name, last_name, phone } = message;
+      message['from_user'] = { username, first_name, last_name, phone } //TODO: (leave this) changed id:username->username; instructions wanted id; either tests or instructions are wrong
+      delete message.username;
+      delete message.first_name;
+      delete message.last_name;
+      delete message.phone;
+    }
+    return messages;
   }
 }
 
