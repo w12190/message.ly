@@ -18,7 +18,7 @@ class User {
     //Calculates pw hash
     try {
       const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
-
+      //TODO: check first before inserting into DB; validating too late
       //Insert into DB
       const results = await db.query(`
       INSERT INTO users (username,
@@ -49,7 +49,7 @@ class User {
    * Accepts a username and password; returns true if authenticated, false otherewise.
   */
   static async authenticate(username, password) {
-    try {
+    try { //TODO: don't need these try/catch; if you were doing something else on top, then it's useful; otherwise it'll propagate up on their own
       // Query DB for "username"
       const results = await db.query(`
       SELECT username, password
@@ -82,7 +82,7 @@ class User {
       WHERE username = $1
       RETURNING username`
         , [username])
-      if (!result) {
+      if (!result) { //TODO: this test doesn't work
         throw new NotFoundError()
       }
     }
@@ -96,7 +96,7 @@ class User {
    * Return format: [{username, first_name, last_name}, ...]
    */
   static async all() {
-    try {
+    try { //TODO: hard to test if you don't order results; order by ASC/DESC any time you return a bunch
       const results = await db.query(`
       SELECT username,
             first_name,
@@ -137,7 +137,7 @@ class User {
    * to_user format: {username, first_name, last_name, phone}
    */
   static async messagesFrom(username) {
-    try {
+    try {//TODO: aliasing is good
       const uMessages = await db.query(`
         SELECT m.id,
               m.body,
@@ -164,7 +164,7 @@ class User {
       }
       return messages;
     } catch (err) {
-      return next(err);
+      return next(err); //TODO: no next, tkae off try/catch
     }
   };
 

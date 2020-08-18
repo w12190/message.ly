@@ -26,7 +26,7 @@ router.post('/login', async function (req, res, next) {
 
   try {
     // Check if user credentials valid
-    if (await User.authenticate(req.body.username, req.body.password)) {
+    if (await User.authenticate(req.body.username, req.body.password)) { //TODO: useful to be more specific; be defensive ()token signing important
       await User.updateLoginTimestamp(req.body.username)
 
       // Create and return JWT token
@@ -41,7 +41,7 @@ router.post('/login', async function (req, res, next) {
     return next(error)
   }
 })
-
+//TODO: maintain same style, make them similar; consistnt naming convention
 /**
  * POST '/register' - Handles user registration.
  * Accepts user's credentials; returns user data if registration successful.
