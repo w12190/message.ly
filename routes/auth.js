@@ -5,7 +5,7 @@ const User = require('../models/user')
 const express = require('express')
 const jwt = require('jsonwebtoken')
 const config = require('../config')
-const { UnauthorizedError } = require('../expressError')
+const { UnauthorizedError, BadRequestError } = require('../expressError')
 
 const Router = require("express").Router;
 const router = new Router();
@@ -33,7 +33,7 @@ router.post('/login', function (req, res, next) {
     }
   }
   catch (error) {
-    next(error)
+    return next(error)
   }
 })
 
@@ -43,10 +43,14 @@ router.post('/login', function (req, res, next) {
  */
 router.post('/register', async function (req, res, next) {
   console.log('Route: /register')
-
+  try {
   const newUser = await User.register(req.body)
   return res.json(newUser)
-})
+  
+} catch (err) {
+  return next(err);
+}
+});
 
 // Exports
 module.exports = router;

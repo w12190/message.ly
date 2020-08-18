@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // get auth token for all routes
-app.use(authenticateJWT);
+// app.use(authenticateJWT);
 
 /** routes */
 
@@ -30,9 +30,10 @@ app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/messages", messageRoutes);
 
-
+console.log(new NotFoundError());
 /** 404 handler: matches unmatched routes; raises NotFoundError. */
 app.use(function (req, res, next) {
+  console.log('************ PATH', req.path);
   return next(new NotFoundError());
 });
 

@@ -3,6 +3,7 @@
 const db = require('../db')
 const bcrypt = require('bcrypt');
 const { BCRYPT_WORK_FACTOR } = require('../config');
+const {BadRequestError} = require('../expressError');
 
 
 
@@ -29,7 +30,13 @@ class User {
           ($1, $2, $3, $4, $5, $6)
       RETURNING username, password, first_name, last_name, phone`,
       [username, hashedPassword, first_name, last_name, phone, new Date()])
-    return results.rows[0]
+    
+    const newUser = results.rows[0];
+    debugger
+    if ( !newUser.username ) {
+      throw new BadRequestError();
+    }
+    return newUser;
   }
 
   /** Authenticate: is username/password valid? Returns boolean. */
@@ -66,7 +73,12 @@ class User {
    * [{username, first_name, last_name}, ...] */
 
   static async all() {
-    
+    const results = await db.query(`
+      SELECT username,
+            first_name,
+            last_name
+      FROM users`);
+    return results.rows;
   }
 
   /** Get: get user by username
@@ -79,6 +91,19 @@ class User {
    *          last_login_at } */
 
   static async get(username) {
+    const result = await db.query(`
+      SELECT username,
+            first_name,
+            last_name,
+            phone,
+            join_at,
+            last_login_at
+      FROM users
+      WHERE username = $1`,
+        [username]);
+    
+    const user = result.rows[0];
+    return user;
   }
 
   /** Return messages from this user.
@@ -90,7 +115,39 @@ class User {
    */
 
   static async messagesFrom(username) {
-  }
+    try {
+      const uMessages = await db.query(`
+        SELECT m.id,
+              m.to_username,
+              m.body,
+              m.sent_at,
+              m.read_at,
+              u.username,
+              u.first_name,
+              u.last_name,
+              u.phone
+        FROM messages AS m
+        JOIN users AS u
+        ON m.to_username = u.username
+        WHERE m.from_username = $1
+      `, [username]);
+      const messages = uMessages.rows;
+  
+      for (let message of messages) {
+        const { username, first_name, last_name, phone } = message;
+        message['to_user'] = { username, first_name, last_name, phone };
+        delete message.username;
+        delete message.first_name;
+        delete message.last_name;
+        delete message.phone;
+      }
+      return messages;
+    } catch (err) {
+      return next(err);
+    }
+  };
+
+  // from_username
 
   /** Return messages to this user.
    *
@@ -101,6 +158,32 @@ class User {
    */
 
   static async messagesTo(username) {
+    const uMessages = await db.query(`
+      SELECT m.id,
+            m.from_username,
+            m.body,
+            m.sent_at,
+            m.read_at,
+            u.username,
+            u.first_name,
+            u.last_name,
+            u.phone
+      FROM users AS u
+      JOIN messages AS m
+      ON m.from_username = u.username
+      WHERE m.to_username = $1`,[username])
+
+      const messages = uMessages.rows;
+
+      for (let message of messages) {
+        const { username, first_name, last_name, phone } = message;
+        message['from_username'] = { id: username, first_name, last_name, phone }
+        delete message.username;
+        delete message.first_name;
+        delete message.last_name;
+        delete message.phone;
+      }
+      return messages;
   }
 }
 
