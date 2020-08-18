@@ -2,6 +2,8 @@
 
 const Message = require("../models/message");
 const { json } = require("body-parser");
+const { ensureLoggedIn } = require("../middleware/auth");
+const { UnauthorizedError } = require("../expressError");
 
 // Imports
 const Router = require("express").Router;
@@ -17,11 +19,17 @@ const router = new Router();
  *
  * Makes sure that the currently-logged-in users is either the to or from user.
  **/
-router.get('/:id', async function (req, res, next) {
+router.get('/:id', ensureLoggedIn, async function (req, res, next) {
   console.log('Route: /:id GET')
-  //TODO: implement security later
+  console.log('res.locals.user', res.locals.user);
   try {
-    return res.json(await Message.get(req.params.id))
+    const message = await Message.get(req.params.id);
+    if (message.to_user.username === res.locals.user.username ||
+      message.from_user.username === res.locals.user.username) {
+      return res.json(message);
+    } else {
+      throw new UnauthorizedError('Don\'t read your neighbor\'s mail!');
+    }
   }
   catch (error) {
     return next(error)
@@ -35,7 +43,7 @@ router.get('/:id', async function (req, res, next) {
  *   {message: {id, from_username, to_username, body, sent_at}}
  *
  **/
-router.post('/', async function (req, res, next){
+router.post('/', async function (req, res, next) {
   console.log('Route: / POST')
   //TODO: get username from token, need token stuff setup
 
