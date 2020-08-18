@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // get auth token for all routes
-// app.use(authenticateJWT);
+app.use(authenticateJWT)
 
 /** routes */
 

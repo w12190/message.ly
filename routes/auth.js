@@ -20,12 +20,10 @@ router.post('/login', async function (req, res, next) {
 
   try {
     // Check if user credentials valid
-    // TODO: changed 'username' to 'req.body.username'; added await and async
-    if (User.authenticate(req.body.username, req.body.password)) {
+    if (await User.authenticate(req.body.username, req.body.password)) {
       await User.updateLoginTimestamp(req.body.username)
 
       // Create and return JWT token
-      //TODO: changed first param of jwt.sign from { username } to { username: req.body.username }
       const token = jwt.sign({ username: req.body.username }, config.SECRET_KEY)
       return res.json({ token })
     }
@@ -39,14 +37,13 @@ router.post('/login', async function (req, res, next) {
 })
 
 /** POST /register: registers, logs in, and returns token.
- *
  * {username, password, first_name, last_name, phone} => {token}.
  */
 router.post('/register', async function (req, res, next) {
   console.log('Route: /register')
   try {
     const newUser = await User.register(req.body)
-    const username = await User.updateLoginTimestamp(req.body.username) //TODO: added this line to update timestamp on login
+    // const username = await User.updateLoginTimestamp(req.body.username) //TODO: added this line to update timestamp on login
     return res.json(newUser)
   } catch (err) {
     return next(err);

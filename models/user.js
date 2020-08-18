@@ -18,7 +18,6 @@ class User {
     const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
 
     //Insert into DB
-    //TODO: added last_login_at to the INSERT INTo so we stopped failing the 'can get' test b/c it register a user via User.get, not /register which calls updateLastLoginTime().
     const results = await db.query(`
       INSERT INTO users (username,
                          password,
@@ -44,14 +43,13 @@ class User {
   */
   static async authenticate(username, password) {
     // Query DB for "username"
-    //TODO: added await to following line
     const results = await db.query(`
       SELECT username, password
       FROM users
       WHERE username = $1`, [username])
   debugger
     // Check if user exists
-    if (results.rows.length !== 0) { //TODO: cannot access .rows[0] if no rows, so changed to rows.length === 0 to check
+    if (results.rows.length !== 0) {
       // Check if password correct
       if (await bcrypt.compare(password, results.rows[0].password) === true) {
         return true
@@ -63,13 +61,12 @@ class User {
   /** Update last_login_at for user */
   static async updateLoginTimestamp(username) {
     // Assume logged in via authenticate()
-    //TODO: forgot await
     const result = await db.query(` 
       UPDATE users
       SET last_login_at = current_timestamp
       WHERE username = $1
-      RETURNING username` //TODO: commented out this line
-      , [username]) //TODO: changed new Date() to current_timestamp on 67
+      RETURNING username`
+      , [username])
     if (!result) {
       throw new NotFoundError()
     }
@@ -122,7 +119,6 @@ class User {
 
   static async messagesFrom(username) {
     try {
-      //TODO: removed an extra m.to_username
       const uMessages = await db.query(`
         SELECT m.id,
               m.body,
@@ -164,7 +160,6 @@ class User {
    */
 
   static async messagesTo(username) {
-    //TODO: added AS from_user to correct the column name
     const uMessages = await db.query(`
       SELECT m.id,
             m.from_username AS from_user,
